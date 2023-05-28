@@ -11,10 +11,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 
 @Composable
 fun MenuScreen(
-    
+    navController: NavHostController
 ) {
     Column (
         modifier = Modifier
@@ -22,13 +24,13 @@ fun MenuScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Button(modifier = Modifier.padding(12.dp), onClick = { /*TODO*/ }) {
+        Button(modifier = Modifier.padding(12.dp), onClick = { navController.navigate("simulation") }) {
             Text("First Fit")
         }
-        Button(modifier = Modifier.padding(12.dp), onClick = { /*TODO*/ }) {
+        Button(modifier = Modifier.padding(12.dp), onClick = { navController.navigate("simulation") }) {
             Text("Best Fit")
         }
-        Button(modifier = Modifier.padding(12.dp), onClick = { /*TODO*/ }) {
+        Button(modifier = Modifier.padding(12.dp), onClick = { navController.navigate("simulation") }) {
             Text("Worst Fit")
         }
     }
@@ -37,5 +39,5 @@ fun MenuScreen(
 @Preview
 @Composable
 fun PreviewMenuScreen() {
-    MenuScreen()
+
 }

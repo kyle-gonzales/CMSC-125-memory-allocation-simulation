@@ -8,36 +8,63 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.NavController
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.example.memoryallocation.ui.theme.MemBlock
 import com.example.memoryallocation.ui.theme.MemoryAllocationTheme
 
 class MainActivity : ComponentActivity() {
 
-    val memory = Memory()
-    val j = JobList()
-    var time = 0
+    val memory by lazy {mutableStateOf(Memory(this))}
+    val j by lazy {mutableStateOf(JobList(this))}
+
+    var time by mutableStateOf(0)
 
     var throughput = HashMap<Int, Int>()
     var fragmentation = HashMap<Int, Int>()
     var timeInQueue = HashMap<Int, Int>()
+    
+    lateinit var navController: NavHostController
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContent {
+            navController = rememberNavController()
             MemoryAllocationTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    Greeting("Android")
+
+                    NavHost(navController = navController, startDestination = "menu") {
+                        composable("menu") {
+                            MenuScreen(navController)
+                        }
+                        composable("simulation") {
+                            SimulationScreen(navController, memory.value.memoryList, j.value.jobList, time)
+                        }
+                    }
+
                 }
             }
         }
     }
 
-    fun firstFitAlgorithm(isBestFit : Boolean = false, isWorstFit : Boolean = false ) {
+    fun firstFitAlgorithm(isBestFit : Boolean = false, isWorstFit : Boolean = false) {
 
+        memory.value = Memory(this)
+        j.value = JobList(this)
+
+        val memory = memory.value
+        val j = j.value
         if (isBestFit) {
             memory.memoryList.sortBy { memBlock -> memBlock.size }
         } else if (isWorstFit) {
