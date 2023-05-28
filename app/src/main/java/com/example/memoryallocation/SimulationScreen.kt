@@ -12,14 +12,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.example.memoryallocation.ui.theme.MemBlock
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SimulationScreen(
     navController : NavHostController,
-    partitions : ArrayList<MemBlock>,
-    jobQueue : ArrayList<Job>,
+    partitions : List<MemBlock>,
+    jobQueue : List<Job>,
     time : Int
 ) {
     Column(
@@ -71,7 +70,11 @@ fun SimulationScreen(
                     }
                 }
             }
-            val nextJob = jobQueue[0]
+            val nextJob : Job? = if (jobQueue.isNotEmpty()) {
+                jobQueue[0]
+            } else {
+                null
+            }
             //next job
             Column(
                 modifier = Modifier
@@ -89,20 +92,24 @@ fun SimulationScreen(
                 }
                 Column {
                     Text("Next Job: ")
-                    Card (
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(80.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.primary
-                        )
-                    ){
-                        Column(
-                            modifier = Modifier.padding(4.dp)
-                        ) {
-                            Text("ID: ${nextJob.id}")
-                            Text("Size: ${nextJob.size}")
+                    if (nextJob != null) {
+                        Card (
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(80.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            )
+                        ){
+                            Column(
+                                modifier = Modifier.padding(4.dp)
+                            ) {
+                                Text("ID: ${nextJob.id}")
+                                Text("Size: ${nextJob.size}")
+                            }
                         }
+                    } else {
+                        Text("No Jobs Left!")
                     }
                 }
                 Column {

@@ -6,25 +6,24 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.navigation.NavController
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.memoryallocation.ui.theme.MemBlock
 import com.example.memoryallocation.ui.theme.MemoryAllocationTheme
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
-    val memory by lazy {mutableStateOf(Memory(this))}
-    val j by lazy {mutableStateOf(JobList(this))}
+    var partitions = mutableStateListOf<MemBlock>()
+    var jobQueue = mutableStateListOf<Job>()
+//    val memory by lazy { mutableStateListOf(Memory(this).memoryList) }
+//    val j by lazy { mutableStateListOf(JobList(this).jobList) }
+
 
     var time by mutableStateOf(0)
 
@@ -38,6 +37,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        val m = Memory(this)
+        val j = JobList(this)
+
+        partitions.addAll(m.memoryList)
+        jobQueue.addAll(j.jobList)
+
         setContent {
             navController = rememberNavController()
             MemoryAllocationTheme {
@@ -46,120 +51,148 @@ class MainActivity : ComponentActivity() {
 
                     NavHost(navController = navController, startDestination = "menu") {
                         composable("menu") {
-                            MenuScreen(navController)
+                            MenuScreen(
+                                navController,
+                                onFirst = {
+                                    lifecycleScope.launch {
+                                        firstFitAlgorithm()
+                                    }
+                                },
+                                onBest = {
+                                    lifecycleScope.launch {
+                                        firstFitAlgorithm(isBestFit = true)
+                                    }
+                                },
+                                onWorst = {
+                                    lifecycleScope.launch {
+                                        firstFitAlgorithm(isWorstFit = true)
+                                    }
+                                }
+                            )
                         }
                         composable("simulation") {
-                            SimulationScreen(navController, memory.value.memoryList, j.value.jobList, time)
+                            SimulationScreen(navController, partitions, jobQueue, time)
                         }
                     }
-
                 }
             }
         }
     }
 
-    fun firstFitAlgorithm(isBestFit : Boolean = false, isWorstFit : Boolean = false) {
+    private fun updatePartition(
+        partition : MemBlock,
+        job : Job? = partition.job,
+        timesUsed : Int = partition.timesUsed,
+    ) : MemBlock{
+        val index = partitions.indexOf(partition)
+        val v = partitions[index]
+        partitions[index] = v.copy(job, timesUsed)
+        return partitions[index]
+    }
 
-        memory.value = Memory(this)
-        j.value = JobList(this)
+    private fun updateJob(
+        job : Job,
+        time : Int
+    ) : Job{
+        val index = jobQueue.indexOf(job)
+        jobQueue[index] = jobQueue[index].copy(time = time)
+        return jobQueue[index]
+    }
 
-        val memory = memory.value
-        val j = j.value
+    private suspend fun firstFitAlgorithm(isBestFit : Boolean = false, isWorstFit : Boolean = false) {
+
+        partitions.clear()
+        partitions.addAll(Memory(this).memoryList)
+        jobQueue.clear()
+        jobQueue.addAll(JobList(this).jobList)
+
+        time = 0
+
         if (isBestFit) {
-            memory.memoryList.sortBy { memBlock -> memBlock.size }
+            partitions.sortBy { memBlock -> memBlock.size }
         } else if (isWorstFit) {
-            memory.memoryList.sortByDescending { memBlock -> memBlock.size }
+            partitions.sortByDescending { memBlock -> memBlock.size }
         }
-
-        var partitions = memory.memoryList
-        var jobQueue = j.jobList
 
         while (jobQueue.isNotEmpty()) {
             var job = jobQueue[0]
             var canFitInPartition = false
+            var found = false
 
-            for (partition in partitions) {
+
+            for (i in partitions.indices) {
+                val partition = partitions[i]
                 if (job.size <= partition.size) {
                     canFitInPartition = true
                     if (partition.isFree()) {
                         println("job ${job.id} is allocated to partition ${partition.id}")
 
-                        partition.job = job
-                        partition.timesUsed += 1
-                        partition.setFragmentation()
+                        updatePartition(partition, job, partition.timesUsed + 1)
+//                        partition.job = job
+//                        partition.timesUsed += 1
+//                        partition.setFragmentation()
 
                         fragmentation[job.id] = partition.getFragmentation()
                         timeInQueue[job.id] = time
 
                         jobQueue.removeAt(0)
+                        found = true
                         break
                     }
                 }
             }
-            if (canFitInPartition) {
-                println("no partition currently available for job ${job.id}")
+            if (!found) {
+                if (canFitInPartition) {
+                    println("no partition currently available for job ${job.id}")
 
-                time += 1
-                throughput[time] = 0
+                    time += 1
+                    throughput[time] = 0
+                    delay(1000)
 
-                for (partition in partitions) {
-                    if (partition.isFree())
-                        continue
+                    for (i in partitions.indices) {
+                        val partition = partitions[i]
+                        if (partition.isFree())
+                            continue
 
-                    var allocatedJob = partition.job
-                    allocatedJob!!.time -= 1
+                        var allocatedJob = partition.job!!
+                        allocatedJob = updatePartition(partition, allocatedJob.copy(time = allocatedJob.time - 1)).job!!
 
-                    if (allocatedJob!!.time == 0) {
-                        println("job ${allocatedJob.id} is being freed from partition ${partition.id} at time $time")
-                        throughput[time] = throughput[time]!! + 1
-                        partition.job = null
-                        partition.setFragmentation()
-                    } else {
-                        println("job ${job.id} will never be allocated")
-                        job.time -= 1
-                        jobQueue.removeAt(0)
+                        if (allocatedJob.time == 0) {
+                            println("job ${allocatedJob.id} is being freed from partition ${partition.id} at time $time")
+
+                            throughput[time] = throughput[time]!! + 1
+
+                            updatePartition(partitions[i], job = null)
+                        }
                     }
+                } else {
+                    println("job ${job.id} will never be allocated")
+
+                    job.time = -1
+                    jobQueue.removeAt(0)
                 }
             }
         }
-        val remainingJobs = arrayListOf<MemBlock>()
 
-        for (partition in partitions) {
-            if (! partition.isFree()){
-                remainingJobs.add(partition)
-            }
-        }
+        while (partitions.any{ ! it.isFree() }) {
 
-        while (remainingJobs.isNotEmpty()) {
-            time += 1
+            time++
             throughput[time] = 0
+            delay(1000)
+            for (i in partitions.indices) {
+                if (partitions[i].isFree())
+                    continue
+                val allocatedJob = updatePartition(partitions[i], partitions[i].job!!.copy(time = partitions[i].job!!.time - 1)).job!!
 
-            for (partition in partitions) {
-
-                var allocatedJob = partition.job
-                allocatedJob!!.time -= 1
-
-                if (allocatedJob!!.time == 0) {
-                    println("job ${allocatedJob.id} is being freed from partition ${partition.id} at time $time")
+                if (allocatedJob.time == 0) {
+                    println("job ${allocatedJob.id} is being freed from partition ${partitions[i].id} at time $time")
                     throughput[time] = throughput[time]!! + 1
-                    partition.job = null
-                    partition.setFragmentation()
-                    remainingJobs.remove(partition)
+
+                    updatePartition(partitions[i], job = null)
+
                 }
+
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String) {
-    Text(text = "Hello $name!")
-}
-
-@Preview(showBackground = true)
-@Composable
-fun DefaultPreview() {
-    MemoryAllocationTheme {
-        Greeting("Android")
     }
 }

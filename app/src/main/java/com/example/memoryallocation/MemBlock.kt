@@ -1,4 +1,4 @@
-package com.example.memoryallocation.ui.theme
+package com.example.memoryallocation
 
 import com.example.memoryallocation.Job
 
@@ -24,6 +24,13 @@ class MemBlock (
     fun getFragmentation() : Int {
         setFragmentation()
         return fragmentation
+    }
+
+    fun copy(newJob : Job?, newTimesUsed : Int? = null): MemBlock {
+        val c = MemBlock(id, size, newJob)
+        newTimesUsed?.let { c.timesUsed = it }
+        c.setFragmentation()
+        return c
     }
 
 }

@@ -1,10 +1,7 @@
 package com.example.memoryallocation
 
 import android.content.Context
-import androidx.lifecycle.LifecycleObserver
-import com.example.memoryallocation.ui.theme.MemBlock
 import java.io.BufferedReader
-import java.io.File
 import java.io.InputStreamReader
 
 class Memory (context : Context)  {
