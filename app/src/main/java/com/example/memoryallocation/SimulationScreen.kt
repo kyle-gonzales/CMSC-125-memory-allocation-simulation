@@ -8,6 +8,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -20,8 +21,8 @@ fun SimulationScreen(
     partitions : List<MemBlock>,
     jobQueue : List<Job>,
     time : Int,
+    throughput : Double,
     isEvaluationEnabled : Boolean
-
 ) {
     Column(
         modifier = Modifier
@@ -96,16 +97,36 @@ fun SimulationScreen(
                     .fillMaxSize(),
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
-                Row (
-                    modifier = Modifier.fillMaxWidth().padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.End
-                ){
-                    Text("Time:")
-                    Text(time.toString(), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Column {
+                    Row (
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.End
+                    ){
+                        Text("Time:")
+                        Text(time.toString(), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Text("Evaluation", fontWeight = FontWeight.Bold)
+                    Card (
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        )
+                    ) {
+                        Column (
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(60.dp)
+                                .padding(4.dp)
+                        ) {
+                            Text("$throughput jobs/sec")
+                        }
+                    }
                 }
                 Column {
-                    Text("Next Job: ")
+                    Text("Next Job", fontWeight = FontWeight.Bold)
                     if (nextJob != null) {
                         Card (
                             modifier = Modifier
@@ -123,7 +144,7 @@ fun SimulationScreen(
                             }
                         }
                     } else {
-                        Text("No Jobs Left!")
+                        Text("No Jobs Left!", fontStyle = FontStyle.Italic)
                     }
                 }
                 Column {

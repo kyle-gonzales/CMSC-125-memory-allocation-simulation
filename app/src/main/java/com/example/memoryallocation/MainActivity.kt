@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -16,6 +17,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.memoryallocation.ui.theme.MemoryAllocationTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.text.DecimalFormat
 
 class MainActivity : ComponentActivity() {
 
@@ -29,10 +31,12 @@ class MainActivity : ComponentActivity() {
 
     var time by mutableStateOf(0)
 
-    var throughput = HashMap<Int, Int>()
+    var tp = HashMap<Int, Int>()
+    var jobsCompleted by mutableStateOf(0)
     var fragmentation = HashMap<Int, Int>()
     var timeInQueue = HashMap<Int, Int>()
-    
+    var usage = ArrayList<MemBlock>()
+
     lateinit var navController: NavHostController
 
 
@@ -72,10 +76,10 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         composable("simulation") {
-                            SimulationScreen(navController, partitions, jobQueue, time, isEvaluationEnabled)
+                            SimulationScreen(navController, partitions, jobQueue, time, if (time == 0) 0.0 else DecimalFormat("#.##").format((jobsCompleted.toDouble() / time.toDouble())).toDouble(), isEvaluationEnabled)
                         }
                         composable("evaluation") {
-                            EvaluationScreen(navController, throughput, fragmentation, timeInQueue)
+                            EvaluationScreen(navController, tp, fragmentation, timeInQueue, usage)
                         }
                     }
                 }
@@ -96,12 +100,7 @@ class MainActivity : ComponentActivity() {
 
     private suspend fun firstFitAlgorithm(isBestFit : Boolean = false, isWorstFit : Boolean = false) {
 
-        partitions.clear()
-        partitions.addAll(Memory(this).memoryList)
-        jobQueue.clear()
-        jobQueue.addAll(JobList(this).jobList)
-
-        time = 0
+        initializeVariables()
 
         if (isBestFit) {
             partitions.sortBy { memBlock -> memBlock.size }
@@ -124,7 +123,7 @@ class MainActivity : ComponentActivity() {
 
                         updatePartition(partition, job, partition.timesUsed + 1)
 
-                        fragmentation[job.id] = partition.getFragmentation()
+                        fragmentation[job.id] = partitions[i].getFragmentation()
                         timeInQueue[job.id] = time
 
                         jobQueue.removeAt(0)
@@ -138,7 +137,7 @@ class MainActivity : ComponentActivity() {
                     println("no partition currently available for job ${job.id}")
 
                     time += 1
-                    throughput[time] = 0
+                    tp[time] = 0
                     delay(1000)
 
                     for (i in partitions.indices) {
@@ -152,7 +151,8 @@ class MainActivity : ComponentActivity() {
                         if (allocatedJob.time == 0) {
                             println("job ${allocatedJob.id} is being freed from partition ${partition.id} at time $time")
 
-                            throughput[time] = throughput[time]!! + 1
+                            tp[time] = tp[time]!! + 1
+                            jobsCompleted ++
 
                             updatePartition(partitions[i], job = null)
                         }
@@ -169,7 +169,7 @@ class MainActivity : ComponentActivity() {
         while (partitions.any{ ! it.isFree() }) {
 
             time++
-            throughput[time] = 0
+            tp[time] = 0
             delay(1000)
             for (i in partitions.indices) {
                 if (partitions[i].isFree())
@@ -178,14 +178,26 @@ class MainActivity : ComponentActivity() {
 
                 if (allocatedJob.time == 0) {
                     println("job ${allocatedJob.id} is being freed from partition ${partitions[i].id} at time $time")
-                    throughput[time] = throughput[time]!! + 1
+                    tp[time] = tp[time]!! + 1
+                    jobsCompleted ++
 
                     updatePartition(partitions[i], job = null)
-
                 }
-
             }
         }
         isEvaluationEnabled = true
+        usage.addAll(partitions.sortedBy { partition -> partition.timesUsed })
+    }
+
+    private fun initializeVariables() {
+        partitions.clear()
+        partitions.addAll(Memory(this).memoryList)
+        jobQueue.clear()
+        jobQueue.addAll(JobList(this).jobList)
+
+        time = 0
+        jobsCompleted = 0
+        isEvaluationEnabled = false
+        usage.clear()
     }
 }
