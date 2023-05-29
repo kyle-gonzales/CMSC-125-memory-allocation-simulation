@@ -19,7 +19,9 @@ fun SimulationScreen(
     navController : NavHostController,
     partitions : List<MemBlock>,
     jobQueue : List<Job>,
-    time : Int
+    time : Int,
+    isEvaluationEnabled : Boolean
+
 ) {
     Column(
         modifier = Modifier
@@ -33,11 +35,11 @@ fun SimulationScreen(
                     .fillMaxWidth()){
                 items(partitions) { partition ->
                     Card (modifier = Modifier
-                        .size(200.dp, 100.dp)
+                        .size(140.dp, 70.dp)
                         .padding(2.dp)) {
                         Column(
                             modifier = Modifier
-                                .weight(.7f)
+                                .weight(.6f)
                                 .fillMaxSize(),
                             verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.CenterHorizontally
@@ -47,25 +49,37 @@ fun SimulationScreen(
                                     modifier = Modifier.fillMaxSize(),
                                     shape = CutCornerShape(0.dp),
                                     colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.primary
+                                        containerColor = MaterialTheme.colorScheme.onPrimary
                                     )
                                 ) {
                                     val job = partition.job as Job
-                                    Text("Job${job.id}")
-                                    Text("Time Left: ${job.time}")
-                                    Text("Size: ${job.size}")
+                                    Column (
+                                        modifier = Modifier
+                                            .padding(4.dp)
+                                    ) {
+                                        Row (
+                                            modifier = Modifier
+                                                .fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text("Job${job.id}", fontSize = 12.sp)
+                                            Text("${job.time}", color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                        }
+                                        Text("Size: ${job.size}", fontSize = 12.sp)
+                                    }
                                 }
                             }
                         }
                         Row(
                             modifier = Modifier
-                                .weight(.3f)
+                                .weight(.4f)
                                 .fillMaxWidth()
                                 .padding(4.dp),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text("Size: ${partition.size}", fontSize = 12.sp)
-                            Text("Times Used: ${partition.timesUsed}", fontSize = 12.sp)
+                            Text("Uses: ${partition.timesUsed}", fontSize = 12.sp)
                         }
                     }
                 }
@@ -98,7 +112,7 @@ fun SimulationScreen(
                                 .fillMaxWidth()
                                 .height(80.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.primary
+                                containerColor = MaterialTheme.colorScheme.primaryContainer
                             )
                         ){
                             Column(
@@ -113,8 +127,14 @@ fun SimulationScreen(
                     }
                 }
                 Column {
-                    Button(modifier = Modifier.fillMaxWidth(), onClick = {  }) {
-                        Text("Tick")
+                    Button(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = {
+                            navController.navigate("evaluation")
+                        },
+                        enabled = isEvaluationEnabled
+                    ) {
+                        Text("Evaluate")
                     }
                 }
             }

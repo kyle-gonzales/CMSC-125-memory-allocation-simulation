@@ -21,6 +21,8 @@ class MainActivity : ComponentActivity() {
 
     var partitions = mutableStateListOf<MemBlock>()
     var jobQueue = mutableStateListOf<Job>()
+
+    var isEvaluationEnabled by mutableStateOf(false)
 //    val memory by lazy { mutableStateListOf(Memory(this).memoryList) }
 //    val j by lazy { mutableStateListOf(JobList(this).jobList) }
 
@@ -46,7 +48,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             navController = rememberNavController()
             MemoryAllocationTheme {
-                // A surface container using the 'background' color from the theme
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
 
                     NavHost(navController = navController, startDestination = "menu") {
@@ -71,7 +72,10 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         composable("simulation") {
-                            SimulationScreen(navController, partitions, jobQueue, time)
+                            SimulationScreen(navController, partitions, jobQueue, time, isEvaluationEnabled)
+                        }
+                        composable("evaluation") {
+                            EvaluationScreen(navController, throughput, fragmentation, timeInQueue)
                         }
                     }
                 }
@@ -90,15 +94,6 @@ class MainActivity : ComponentActivity() {
         return partitions[index]
     }
 
-    private fun updateJob(
-        job : Job,
-        time : Int
-    ) : Job{
-        val index = jobQueue.indexOf(job)
-        jobQueue[index] = jobQueue[index].copy(time = time)
-        return jobQueue[index]
-    }
-
     private suspend fun firstFitAlgorithm(isBestFit : Boolean = false, isWorstFit : Boolean = false) {
 
         partitions.clear()
@@ -113,12 +108,12 @@ class MainActivity : ComponentActivity() {
         } else if (isWorstFit) {
             partitions.sortByDescending { memBlock -> memBlock.size }
         }
+        delay(1000)
 
         while (jobQueue.isNotEmpty()) {
             var job = jobQueue[0]
             var canFitInPartition = false
             var found = false
-
 
             for (i in partitions.indices) {
                 val partition = partitions[i]
@@ -128,9 +123,6 @@ class MainActivity : ComponentActivity() {
                         println("job ${job.id} is allocated to partition ${partition.id}")
 
                         updatePartition(partition, job, partition.timesUsed + 1)
-//                        partition.job = job
-//                        partition.timesUsed += 1
-//                        partition.setFragmentation()
 
                         fragmentation[job.id] = partition.getFragmentation()
                         timeInQueue[job.id] = time
@@ -194,5 +186,6 @@ class MainActivity : ComponentActivity() {
 
             }
         }
+        isEvaluationEnabled = true
     }
 }
